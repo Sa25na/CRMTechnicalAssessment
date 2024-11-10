@@ -1,0 +1,33 @@
+using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Client;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Query;
+using System;
+
+public class CaptureDeclinePlugin : IPlugin
+{
+    public void Execute(IServiceProvider serviceProvider)
+    {
+        IPluginExecutionContext context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+        IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+        IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
+
+        // This will capture decline data
+        if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity)
+        {
+            Entity target = (Entity)context.InputParameters["Target"];
+
+            // This to check if the response is a decline?
+            if (target.Contains("declineReason"))
+            {
+                // This will create a new record in the custom entity
+                Entity declineRecord = new Entity("custom_decline");
+                declineRecord["custom_email"] = target["email"];
+                declineRecord["custom_decline_reason"] = target["declineReason"];
+                declineRecord["custom_event"] = target["eventId"];
+                declineRecord["custom_date_declined"] = DateTime.UtcNow;
+                service.Create(declineRecord);
+            }
+        }
+    }
+}
