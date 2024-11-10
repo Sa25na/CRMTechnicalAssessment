@@ -1,0 +1,29 @@
+// decline.component.ts (This is Angular component to handle decline response)
+import { HttpClient } from '@angular/common/http';
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-decline',
+  template: `
+    <h3>Event Invitation</h3>
+    <button (click)="declineEvent()">Decline Invitation</button>
+  `
+})
+export class DeclineComponent {
+  constructor(private http: HttpClient) {}
+
+  declineEvent() {
+    const payload = {
+      email: 'seun@awokoya.com', // This is the sample email I used.
+      eventId: 'Blessbless', // EventID
+      declineReason: 'Not Interested'
+    };
+
+    this.http.post('https://your-dynamics365-instance.com/api/data/v9.0/custom_decline', payload)
+      .subscribe(response => {
+        console.log('Decline recorded:', response);
+      }, error => {
+        console.error('Error recording decline:', error);
+      });
+  }
+}
