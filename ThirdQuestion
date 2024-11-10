@@ -1,0 +1,3 @@
+3. Alternative Technical Approach to Capture Accept/Decline
+Power Automate: Create a Power Automate flow triggered by email responses. When an email with “Accept” or “Decline” in the subject line is received, Power Automate parses it and updates the appropriate record in Dynamics 365.
+Email Tracking: Leverage Dynamics 365 Customer Service email tracking. When a recipient clicks "Accept" or "Decline," track the event as a response in a custom field.
