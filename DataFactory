@@ -1,0 +1,136 @@
+Task 3: Development on Azure Data Factory
+1. Azure API Management Setup to Connect On-Premises GET and POST APIs
+To connect to on-premises APIs through Azure API Management (APIM), follow these steps:
+
+Step 1: Install and Configure Self-hosted Integration Runtime
+Install the Self-hosted Integration Runtime (IR) on a server within your on-premises network.
+Configure it with the required network permissions to communicate with the on-premises APIs.
+
+Step 2: Register API in Azure API Management
+In APIM, create a new API and provide details such as API Name, URL, and OpenAPI specifications.
+Use Policies in APIM to control traffic, log requests, and secure connections to your API.
+
+Step 3: Configure Azure Data Factory to Use API
+Set up an HTTP Linked Service in Azure Data Factory using APIM’s URL.
+Use this linked service for GET/POST operations in ADF pipelines to read data from and write data to the on-premises APIs.
+
+2. Azure Data Factory ETL Data Pipeline Setup
+The ETL pipeline will look up records and appropriate GUIDs from Dynamics 365 and then update source data accordingly.
+
+Step-by-Step Implementation for Lookup Pipeline:
+
+i. Lookup and Update from Another Table in Dynamics 365:
+Step 1: Create a Dynamics 365 Linked Service in Azure Data Factory.
+Step 2: Set up a Lookup Activity to retrieve records from the related table in Dynamics 365 (e.g., looking up account IDs for contacts).
+Step 3: Use a Mapping Data Flow to map the lookup results with source data.
+Step 4: Implement a Conditional Split or If Condition in the data flow to update source data based on lookup results.
+
+ii. Lookup and Retrieve GUID:
+Step 1: Add a Lookup Activity to fetch GUIDs from the related Dynamics 365 table.
+Step 2: In a ForEach Activity, iterate over records that need updating.
+Step 3: Use a Data Flow Activity to update the source dataset with the correct GUIDs.
+Example Pipeline JSON:
+
+Here is the Json that I will suggest:
+{
+  "name": "DynamicsLookupPipeline",
+  "activities": [
+    {
+      "name": "LookupActivity",
+      "type": "Lookup",
+      "typeProperties": {
+        "source": {
+          "type": "DynamicsSource",
+          "query": "SELECT contactid FROM contacts WHERE lastname = 'Doe'"
+        },
+        "dataset": { "referenceName": "DynamicsDataset", "type": "DatasetReference" }
+      }
+    },
+    {
+      "name": "ForEachActivity",
+      "type": "ForEach",
+      "typeProperties": {
+        "items": "@activity('LookupActivity').output.value",
+        "activities": [
+          {
+            "name": "UpdateGUIDActivity",
+            "type": "DataFlow",
+            "typeProperties": {
+              "dataFlow": { "referenceName": "UpdateGUIDFlow", "type": "DataFlowReference" }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+
+3. Azure Data Pipeline to Create & Update Contact Records from Core System to Dynamics 365
+This pipeline will regularly sync contact records from the core system to Dynamics 365 based on the provided Entity Relationship Diagram (ERD).
+
+Step-by-Step Pipeline Configuration:
+Step 1: Create Linked Services for both the core system and Dynamics 365.
+Step 2: Use a Copy Data Activity to pull contact records from the core system.
+Step 3: Add a Mapping Data Flow to determine if the contact already exists in Dynamics 365.
+Use Join and Lookup transformations to check for existing records based on unique identifiers.
+Step 4: Configure an Upsert transformation in the data flow to either update existing contacts or insert new ones.
+Pipeline JSON Sample:
+
+Below the sample of the JSON format
+{
+  "name": "ContactSyncPipeline",
+  "activities": [
+    {
+      "name": "CopyContacts",
+      "type": "Copy",
+      "typeProperties": {
+        "source": { "type": "SqlSource", "query": "SELECT * FROM CoreSystemContacts" },
+        "sink": { "type": "DynamicsSink", "entityName": "contacts" },
+        "enableUpsert": true,
+        "upsertKey": "contactid"
+      }
+    }
+  ]
+}
+
+4. Azure Data Pipeline to Migrate Leads & Tasks from On-Premises Dynamics 365
+To retain the createdOn, createdBy, and modifiedBy metadata and maintain relationships with lookups:
+
+Steps for Migration Pipeline:
+Step 1: Set up a Linked Service for on-premises Dynamics 365 and Azure SQL.
+Step 2: Use a Copy Data Activity to export Leads and Tasks from on-premises Dynamics 365 to Azure Blob Storage.
+Step 3: Utilize Data Flow to map createdOn, createdBy, and modifiedBy fields into Dynamics 365 cloud.
+Step 4: Configure Lookup Activity to resolve contactid and team sharing lookups for migrated records.
+Step 5: Use Mapping Data Flow to insert or update records in the Dynamics 365 cloud environment while maintaining relationships.
+Pipeline JSON Sample:
+
+Here is a JSON I will write:
+{
+  "name": "LeadsAndTasksMigrationPipeline",
+  "activities": [
+    {
+      "name": "ExportLeadsAndTasks",
+      "type": "Copy",
+      "typeProperties": {
+        "source": { "type": "SqlSource", "query": "SELECT * FROM LeadsAndTasks" },
+        "sink": { "type": "BlobSink", "path": "adfcontainer/leadsandtasks" }
+      }
+    },
+    {
+      "name": "LookupContacts",
+      "type": "Lookup",
+      "typeProperties": {
+        "source": { "type": "DynamicsSource", "query": "SELECT contactid FROM contacts" }
+      }
+    },
+    {
+      "name": "MigrateToDynamics",
+      "type": "MappingDataFlow",
+      "typeProperties": {
+        "transformations": [
+          { "name": "MapFields", "type": "Mapping", "mappings": [...] }
+        ]
+      }
+    }
+  ]
+}
