@@ -1,0 +1,57 @@
+// notification.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class NotificationService {
+  constructor(private http: HttpClient) {}
+
+  getPendingTasks() {
+    const fetchXml = `
+      <fetch>
+        <entity name="task">
+          <attribute name="subject" />
+          <attribute name="duedate" />
+          <filter>
+            <condition attribute="statuscode" operator="eq" value="1" /> <!-- Pending status -->
+          </filter>
+        </entity>
+      </fetch>
+    `;
+    return this.http.get(`https://your-dynamics365-instance.com/api/data/v9.0/tasks?fetchXml=${encodeURIComponent(fetchXml)}`);
+  }
+}
+
+//NOTIFICATION COMPONENTS
+// notification.component.ts
+import { Component, OnInit } from '@angular/core';
+import { NotificationService } from './notification.service';
+
+@Component({
+  selector: 'app-notification',
+  template: `
+    <div *ngFor="let task of tasks" class="notification">
+      <p>{{ task.subject }} is due on {{ task.duedate }}</p>
+    </div>
+  `,
+  styles: [`
+    .notification {
+      background-color: #ffcccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+  `]
+})
+export class NotificationComponent implements OnInit {
+  tasks = [];
+
+  constructor(private notificationService: NotificationService) {}
+
+  ngOnInit() {
+    this.notificationService.getPendingTasks().subscribe((data: any) => {
+      this.tasks = data.value;
+    });
+  }
+}
